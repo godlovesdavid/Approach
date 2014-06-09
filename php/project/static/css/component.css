@@ -1,0 +1,95 @@
+.round
+{
+    padding: 8px;
+    border-radius: 8px;
+    box-shadow: 0 0 2px 2px rgba(200,200,200,0.5);
+}
+.Button
+{
+    position: relative;
+    display: inline-block;
+    background: #9898ca;
+    color: #ffffff;
+    font-size: 15px;
+}
+
+.HorizontalList
+{
+    display: inline-block;
+    width: 100%;
+    white-space: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.AppCard
+{
+    display: inline-block;
+    margin-right: auto;
+    background: #ddc;
+    color: #333;
+    position: relative;
+}
+
+.messageboard
+{
+    padding: 100px;   
+}
+.Messages
+{
+    background-color: #505058;
+    border-radius: 14px;
+}
+.Message
+{
+    border-top: 2px dotted #557;
+    padding: 2px 0px 8px 144px;
+    margin: 0px 0px 2px -4px;
+    background: #ddc;
+    color: #333;
+    position: relative;
+    border-radius: 14px;
+    
+}
+
+.Message .profile
+{
+    width: 144px;
+    float: left;
+    margin-left: -144px;
+    margin-top: -4px;
+    padding: 4px;
+    display: inline-block;
+    border-right: 1px dotted black;
+    border-bottom: 1px dotted black;
+    border-radius: 14px;    
+    min-height: 172px;
+}
+.profile img{ width: 120px; }
+.Message .contents
+{
+    width: 100%;
+    min-height: 222px;
+    display: inline-block;
+}
+.Message .contents li{ width: 100%; display: inline-block;}
+.Message .contents .social{ border-top: 1px solid #334; margin-top: 2em;}
+.Message .contents .social .vote{ color: white;}
+.vote
+{
+    font-size: 32px;
+    line-height: 32px;
+    vertical-align: middle;
+    float: left;
+}
+.vote .fa-caret-up
+{
+    color: #7c8;
+    background-color: rgba(0, 0, 0, 0);  
+}
+.vote .fa-caret-down
+{
+    color: #c77;
+    margin-top: -0.5em;
+    background-color: rgba(0, 0, 0, 0);
+}

@@ -1,0 +1,22 @@
+<Template xmlns:Component="Component://approach.im" xmlns:Render="Render://approach.im">
+	<Component:MediaList type="json">
+	{
+		"compositions":
+		{
+			"title" : "MediaHeading",
+			"alias" : "name",
+			"tags"  : "keywords",
+			"media" : "thumb"
+		}
+	}
+	</Component:MediaList>
+	<Render:Markup bind="MediaList" tag="ul" class="MediaList">
+	<li class="media">
+		Media Image: 	<input type="text" name="_[@ thumb @][@ __selfIndex @]" style="position: absolute; bottom: 1em; left: 0px;" /><br />
+		Current: <img class="media-object" src="[@ thumb @]" alt="[@ name @]" /><br />
+		Heading: <input style="height: 1em;" type="file" name="_[@ MediaHeading @][@ __selfIndex @]" /><br />
+		Title: <input type="text" name="_[@ name @][@ __selfIndex @]" /><br />
+		Tags: <input type="text" name="_[@ keywords @][@ __selfIndex @]" /><br />
+	</li>
+	</Render:Markup>
+</Template>
