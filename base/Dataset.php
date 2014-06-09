@@ -28,164 +28,32 @@ IF YOU NEED PRODUCTION USAGE, USE MSSQL OR THOUROUGHLY TEST MYSQLI VERSION FOR N
 MONGODB, REDIS and XML FILE CONNECTORS ON THE WAY - DESIGNING CONNECTOR ARCHITECTURE CURRENTLY
 
 Request For Comments:
-1. 	The Generator needs to understand connectors somehow, very cleanly.
-2. 	Before or after moving data into the profile property, the concept of PrimaryKey/Foreign Keys
-	needs to be made generic
-3. 	How can we make the search functionality stronger, easier to batch, more intuitive and/or more generic?
+1. 	How can we make the search functionality stronger, easier to batch, more intuitive and/or more generic?
  
 */
 
-global $RuntimePath;
 global $db;
+global $RuntimePath;
 
-//require_once('/../__config_error.php');
-//require_once('/../__config_database.php');
-
-if(!isset($db)) die('No database selected');
-if(!isset($RuntimePath)) $RuntimePath=$_SERVER['DOCUMENT_ROOT'] .'/';	//Included from core.php?
+if(!isset($db))
+{
+	include_once(__DIR__.'/../__config_error.php');
+	include_once(__DIR__.'/../__config_database.php');
+	if(!isset($db))
+	{
+		include_once('__config_error.php');
+		include_once('__config_database.php');
+		if(!isset($db)) die('No database selected');
+	}
+}
+if(!isset($RuntimePath)) $RuntimePath=$_SERVER['DOCUMENT_ROOT'];	//Included from core.php?
 
 $tableName='NULL TABLE';
 $currentTable;
 
-function fileSave($file, $data)
-{
-    $handle =fopen($file, 'w+');
-    fwrite($handle,$data);
-    fclose($handle);
-}
-
-function SavePHP($dbo)
-{
-  global $RuntimePath;
-    /*
-     *	To Do: Move Variables into a public static Dataset::profile map
-     */
-  $theOutput = "<?php \nclass " . $dbo->table . " extends Dataset { \n";
-  $theOutput .= "\n\tpublic \$Columns=" . var_export($dbo->Columns, true);
-
-  $theOutput .= ";\n\tpublic \$table='$dbo->table';";
-
-  if( isset($dbo->PrimaryKey) ) $theOutput .= "\n\tpublic \$PrimaryKey='$dbo->PrimaryKey';";
-  else $theOutput .= "\n\tpublic \$PrimaryKey='+++PARENT+++';";
-  
-  if( isset($dbo->ForeignKey) ) $theOutput .= "\n\tpublic \$ForeignKey='".var_export($dbo->ForeignKey,true).'\';';
-
-  $theOutput .= "\n\tpublic \$data;";
-  $theOutput .= "\n}\n?>";
-
-//  print_r($theOutput);	$RuntimePath . 'support/datasets/' 
-  fileSave($RuntimePath . "support/datasets/" . $dbo->table . '.php', $theOutput);
-}
-
-function RevisingSavePHP($dbo)
-{
-  global $RuntimePath;
-    /*
-     *	To Do: Move Variables into a public static Dataset::profile map
-     */
-    
-  $LinePrefix="\n\t";
-  $theOutput = '<?php '.PHP_EOL.'require_once(__DIR__.\'/../../core.php\');'.PHP_EOL.'class '.$dbo->table . ' extends Dataset { '.PHP_EOL;
-  $theOutput .= $LinePrefix.'public static $profile[\'header\']=' . var_export($dbo->Columns, true).';';
-
-  $theOutput .= $LinePrefix.'public static $profile[\'target\']=\''.$dbo->table.'\';';
-
-  if( count($dbo->ForeignKey) > 0 ) $theOutput .= $LinePrefix.'public static $profile[\'Accessor\'][\'ForeignKey\']='.var_export($dbo->ForeignKey,true).';';
-  if( isset($dbo->PrimaryKey)) $theOutput .= $LinePrefix.'public static $profile[\'Accessor\'][\'Primary\']=\'<Accessor="Inherited" />\';';
-
-  $theOutput .= $LinePrefix.'public $data;';
-  $theOutput .= PHP_EOL.'}'.PHP_EOL.'?>';
-
-//  print_r($theOutput);	$RuntimePath . 'support/datasets/' 
-  fileSave($RuntimePath . 'support/datasets/' . $dbo->table . '.php', $theOutput);
-}
-
-
-function ms_escape_string($data)
-{
-    if ( !isset($data) or empty($data) ) return '';
-    if ( is_numeric($data) ) return $data;
-    
-    $non_displayables = array(
-	'/%0[0-8bcef]/',            // url encoded 00-08, 11, 12, 14, 15
-	'/%1[0-9a-f]/',             // url encoded 16-31
-	'/[\x00-\x08]/',            // 00-08
-	'/\x0b/',                   // 11
-	'/\x0c/',                   // 12
-	'/[\x0e-\x1f]/'             // 14-31
-    );
-    foreach ( $non_displayables as $regex )
-	$data = preg_replace( $regex, '', $data );
-    $data = str_replace("'", "''", $data );
-    return $data;
-}
-
-
-function LoadDirect($query)
-{
-    $connection=new Dataset('information_schema',array('target'=>'information_schema','queryoverride'=>$query));
-    $newRow; $Container=array();
-
-    while($newRow=$connection->load()){	$Container[] = $newRow;    }
-    return $Container;
-}
-
-function UpdateSchema()
-{
-  $sql='SELECT TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, ORDINAL_POSITION, COLUMN_DEFAULT, IS_NULLABLE, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS';
-
-  $spread=array();
-  $DataObjects=array();
-  $schemainfo=LoadDirect($sql);
-
-  foreach($schemainfo as $SchemaRow)
-  {
-    $spread[$SchemaRow->data['TABLE_NAME']][$SchemaRow->data['COLUMN_NAME']]=$SchemaRow->data;  
-  }  
-  
-  foreach($spread as $table => $columns)
-  {
-    $sql="SELECT * FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE TABLE_NAME = N'$table';";
-    $findKeys=LoadDirect($sql);
-
-    $sql="SELECT * FROM INFORMATION_SCHEMA.VIEW_COLUMN_USAGE WHERE VIEW_NAME = N'$table';";
-    $keyProperties=LoadDirect($sql);
-
-    $dObj = new stdClass();
-
-    foreach($findKeys as $row)
-    {
-        $str = explode('_',$row->data['CONSTRAINT_NAME']);
-        if($str[0] == "PK")
-            $dObj->PrimaryKey = $row->data['CONSTRAINT_NAME'];
-        else
-            $dObj->ForeignKey[]=$row->data['CONSTRAINT_NAME'];
-    }
-    $dObj->PrimaryKey='id';
-
-    $t=array();
-    foreach($keyProperties as $View)
-    {
-      if($View === reset($keyProperties) )
-      {
-        $t = $spread[$table];
-        $spread[$table]=array();
-      }
-      $spread[$table][$View->data['TABLE_NAME']][$View->data['COLUMN_NAME']] = array_merge($spread[$View->data['TABLE_NAME']][$View->data['COLUMN_NAME']], $View->data);
-    }
-
-    $dObj->Columns = $spread[$table];
-    $dObj->table = $table;
-
-    SavePHP($dObj);
-  }
-}
-
-//UpdateSchema();
-
 class Dataset
 {
-    public $table, $key, $options, $data,$PrimaryKey;
+    public $data,$options;
 
     function Dataset($t, $options=array())
     {
@@ -201,8 +69,8 @@ class Dataset
         /* Default to selecting top 10 rows of the database */
         /* To Do: Default to all if !$ApproachDebugMode ? */
 
-        $command='SELECT * ';
-        $range='';
+        $command='SELECT ';
+        $range='* ';
         $target= isset($t)? $t : get_class($this);
         $method='';
         $condition='';
@@ -235,6 +103,7 @@ class Dataset
         if($queryoverride != 'NULL') $buildQuery = $queryoverride;
         $options['queryoverride']=$buildQuery;
         if(isset($options['debug'])) print_r('<br>'.PHP_EOL.$buildQuery.PHP_EOL.'<br>');
+
         if($tableName!=$t) //Already on the right table? Don't restart the query! D:
         {
             $currentTable=$db->query($buildQuery);
@@ -256,6 +125,7 @@ class Dataset
         {
             $data = mysqli_fetch_assoc($currentTable);
 
+			$this->options['debug']=null;
             $newRow = new Dataset($tableName, $this->options);   //To Do: Move to Load Objects
             if(is_array($data))
             {
@@ -267,20 +137,36 @@ class Dataset
     function save($primaryValue=NULL)  //call this function after using the new update() function. it will save changes on the php object to database.
     {
         global $RuntimePath;
-	global $db;
+		global $db;
 	
-        if($this->PrimaryKey == '<Accessor="Inherited" />')
+		//TO DO: Refactor into disassemble() & save() --or-- save() & commit() --or-- something.
+        if(isset($this->profile['Accessor']['Reference'])) //PrimaryKey == '<Accessor="Inherited" />')
         {
-            foreach($this->Columns as $tableName => $table)
+			$SubsetsSaved=array();
+            foreach($this->profile['header'] as $Proprety => &$Aspects)
             {
-                require_once($RuntimePath . 'support/datasets/' . $tableName . '.php');
-                $AbstractedOrigin = new $tableName($tableName);
-                foreach($table as $Column => $Properties)
-                {
-                    if(isset($this->data[$Column]))
-                    $AbstractedOrigin->data[$Column] = $this->data[$Column];
-                }
-                $AbstractedOrigin->save($primaryValue);
+				$SubsetName =($Aspects['TABLE_SCHEMA']=='information_schema'? 'schema/':'').$Aspects['TABLE_NAME'];
+				if(!in_array($SubsetName,$SubsetsSaved))	$SubsetsSaved[$SubsetName][]=$Aspects[''];
+
+				/*
+				 *TO DO: Unify key associations to a standard mapping via connectors
+				 *Example: require_once('/.../support/datasets/mongodb3_01/geoDB_local/Countries.php');
+
+				$SubsetName = $Aspects['DATABASE_TECH'].'/'.$Aspects['DATABASE_CONTAINER'].'/'. $Aspects['DATASET'];
+				if(!in_array($SubsetName,$SubsetsSaved))	$SubsetsSaved[]=$SubsetName;
+				 */
+			}
+
+			foreach($SubsetsSaved as $SubsetName)
+			{
+				//Just noticing, $RuntimePath . '/support/datasets/' is used enough it should prolly be an environment variable
+				//Should probably collect all environment values into some structure and get some thread-safety and context sharing
+				require_once($RuntimePath . '/support/datasets/'. $SubsetName . '.php');
+				$SubsetOrigin = new $Aspects['TABLE_NAME']($Aspects['TABLE_NAME']);
+
+				foreach($this->data as $Proprety => &$Value)
+					if($this->profile['header'][$Property]['TABLE_NAME'])	$Subset->data[$Property] = $this->data[$Property];
+				$SubsetOrigin->save($primaryValue); //Down the pipe you go
             }
         }
         else
@@ -289,45 +175,29 @@ class Dataset
           $SerializedProperties ='';
           $SerializedValues ='';
 
-          if(isset($primaryValue)) $this->data[$this->PrimaryKey] = $primaryValue;
+		  $primarykey=$this::$profile['Accessor']['Primary'];
+          if(isset($primaryValue)) $this->data[$this->profile['Accessor']['Primary']] = $primaryValue;
           foreach($this->data as $key => $value)
           {
-              if($key != $this->PrimaryKey && $value != '' && isset($value) )
+              if($key != $this::$profile['Accessor']['Primary'] && $value != '' && isset($value) )
               {
-		  $val=(is_string($value) ? '\'' . ms_escape_string($value) . '\', ' : $value.', ');
-    
-		  $valuePairs .= ' '. $key .' = '.$val;
-                  $SerializedProperties .= $key .', ';
-                  $SerializedValues .= $val;
+				$val=(is_string($value) ? '\'' . ms_escape_string($value) . '\', ' : $value.', ');
+				
+				$valuePairs .= ' '. $key .' = '.$val;
+						$SerializedProperties .= $key .', ';
+						$SerializedValues .= $val;
               }
           }
           $valuePairs=substr($valuePairs, 0, -2);
           $SerializedProperties=substr($SerializedProperties, 0, -2);
           $SerializedValues=substr($SerializedValues, 0, -2);
-
-          $result = mysqli_query($db,'INSERT INTO '. $this->table . ' ( ' . $SerializedProperties . ') VALUES( ' . $SerializedValues . ') ON DUPLICATE KEY UPDATE '. $valuePairs. ';' );
-	  if($result) $this->data[$this->PrimaryKey]=mysqli_insert_id($db);
-	}
-/*	print_r('<pre>'.
-		'INSERT INTO '. $this->table . ' ( ' . $SerializedProperties . ') VALUES( ' . $SerializedValues . ') ON DUPLICATE KEY UPDATE '. $valuePairs. ';' 
-		.'</pre><hr>'.mysqli_error($db).'<hr>');
-        */
-	
+		  $query='INSERT INTO '. $this->table . ' ( ' . $SerializedProperties . ') VALUES( ' . $SerializedValues . ') ON DUPLICATE KEY UPDATE '. $valuePairs. ';' ;
+          $result = mysqli_query($db,$query);
+		  if($this->options['debug']) print_r($query);
+		  if($result) $this->data[$this::$profile['Accessor']['Primary']]=mysqli_insert_id($db);
+		}
         return $this->data;
     }
-    function toPHP()
-    {
-	global $RuntimePath;
-        $theOutput = "<? \nclass " . $this->table . " extends MySQLset { ";
-        foreach($this->data as $key => $value)
-        {
-            if($key != 'table' && $key !='key') $theOutput .= "\n\tpublic \$this->data['$key'];";
-        }
-        $theOutput .= "\n}\n?>";
-
-        fileSave($RuntimePath . 'support/datasets/' . $this->table . '.php', $theOutput);
-    }
-
 }
 
 function DataclassError($errno, $errstr, $errfile, $errline, array $errcontext)
@@ -347,14 +217,18 @@ function LoadObjects($table, $options=Array())
 
     try
     {
-        if(!include_once $RuntimePath . 'support/datasets/' . $table . '.php') throw new ErrorException("Data missing");
+        if(!include_once $RuntimePath . '/support/datasets/' . $table . '.php') throw new ErrorException("Data missing");
         else $currentRow = new $table($table, $options);
     }
     catch(ErrorException $e)
     {
-        exit("SCHEMA FAIL");
-	UpdateSchema();
-        require_once $RuntimePath . 'support/datasets/' . $table . '.php';
+	try
+	{
+	    UpdateSchema();
+	    if(!include_once $RuntimePath . '/support/datasets/' . $table . '.php') throw new ErrorException("Data missing");
+	    else $currentRow = new $table($table, $options);
+	}
+	catch(ErrorException $e){ exit("SCHEMA FAIL");	}
     }
 
     //Get That Data !! This Where 3/5 The Magic Happens! =D
@@ -382,14 +256,14 @@ function LoadObject($table, $options=Array())
     //Look For Generated DataBase Object File, If Not There Try To Make One
     try
     {
-        if(!include_once $RuntimePath . 'support/datasets/' . $table . '.php') throw $DatasetMissing;
+        if(!include_once $RuntimePath . '/support/datasets/' . $table . '.php') throw $DatasetMissing;
         $currentRow = new $table($table, $options);
     }
     catch(ErrorException $e)
     {
-	exit("SCHEMA FAIL");
-        UpdateSchema();
-        require_once $RuntimePath . 'support/datasets/' . $table . '.php';
+		exit("SCHEMA FAIL");
+        //UpdateSchema();
+        //require_once $RuntimePath . '/support/datasets/' . $table . '.php';
     }
 
     //Get That Data !! This Where 3/5 The Magic Happens! =D
@@ -405,6 +279,178 @@ function LoadObject($table, $options=Array())
     return $Container;
 }
 
+
+
+
+
+
+
+
+
+
+function fileSave($file, $data)
+{
+    $handle =fopen($file, 'w+');
+    fwrite($handle,$data);
+    fclose($handle);
+}
+
+function SavePHP($dbo,$classpath='')
+{
+  global $RuntimePath;
+    /*
+     *	To Do: Move Variables into a public static Dataset::profile map
+     */
+  $RefersExist=isset($dbo->ForeignKey);
+
+  $LinePrefix="\n\t";
+  $theOutput = '<?php '.PHP_EOL.'require_once(__DIR__.\'/../../core.php\');'.PHP_EOL.'class '.$dbo->table . ' extends Dataset'.PHP_EOL.'{';
+
+  //TO DO: In C++ this would be public static const, but in PHP we will need to make it protected
+  //First will need to make read-only accessor/get function in Dataset and ensure other classes are using it
+  
+  $theOutput .= $LinePrefix.'public static $profile= array(' ;
+  $theOutput .= $LinePrefix."\t'target' =>'".$dbo->table.'\',';
+  if( isset($dbo->PrimaryKey))
+  {
+	$theOutput .= $LinePrefix."\t'Accessor'=>array( ".($RefersExist?$LinePrefix."\t\t":'').'\'Primary\' => \''.$dbo->PrimaryKey.'\'';
+	if($RefersExist)
+	{
+		$theOutput .= ','.$LinePrefix."\t\t'Reference'=>array( ";//implode('\', \'',$dbo->ForeignKey).'\')';
+		foreach($dbo->ForeignKey as $k => $v)
+		{
+			$theOutput .=' array(\'';
+			foreach($v as $v2)
+			{
+				$theOutput .=implode('\',\'',$v2);
+			}
+			$theOutput .='\'),';//\''.$k.'\' => array(\''.$a.'\')';
+		}
+		rtrim($theOutput,',');
+		$theOutput .= ')';
+	}
+	$theOutput .= '),';
+  }
+  elseif($RefersExist)
+	$theOutput .= $LinePrefix."\t'Accessor'=>array( 'Reference'=>array( '".implode(', ',$dbo->ForeignKey).'\'),';
+
+  $theOutput .= $LinePrefix."\t'header'=>array( ";
+  foreach($dbo->Columns as $col => $aspect)
+  {
+	$theOutput.=$LinePrefix."\t\t'".$col.'\' => array( ';
+	foreach($aspect as $k => $v)
+	{
+		$theOutput.=' \''.$k.'\' => \''.str_replace('\'','\\\'',$v).'\',';
+	}
+	rtrim($theOutput,',');
+	$theOutput.='),';
+  }
+  rtrim($theOutput,',');
+  $theOutput.=$LinePrefix."\t".')'.$LinePrefix.');';
+
+  $theOutput .= $LinePrefix.'public $data;';
+  $theOutput .= PHP_EOL.'}'.PHP_EOL.'?>';
+
+  if (!is_dir($RuntimePath . '/support/datasets/' .$classpath))	mkdir($RuntimePath . '/support/datasets/' .$classpath, 01740, true);
+  fileSave($RuntimePath . '/support/datasets/' .$classpath.'/'. $dbo->table . '.php', $theOutput);
+}
+
+
+function ms_escape_string($data)
+{
+    if ( !isset($data) or empty($data) ) return '';
+    if ( is_numeric($data) ) return $data;
+    
+    $non_displayables = array(
+	'/%0[0-8bcef]/',            // url encoded 00-08, 11, 12, 14, 15
+	'/%1[0-9a-f]/',             // url encoded 16-31
+	'/[\x00-\x08]/',            // 00-08
+	'/\x0b/',                   // 11
+	'/\x0c/',                   // 12
+	'/[\x0e-\x1f]/'             // 14-31
+    );
+    foreach ( $non_displayables as $regex )
+	$data = preg_replace( $regex, '', $data );
+    $data = str_replace("'", "''", $data );
+    return $data;
+}
+
+
+function LoadDirect($query,$t='information_schema')
+{
+    $connection=new Dataset($t,array('queryoverride'=>$query));
+    $newRow; $Container=array();
+
+    while($newRow=$connection->load()){	$Container[] = $newRow;    }
+
+    return $Container;
+}
+
+function UpdateSchema()
+{
+  //need switch() case: for database type [MySQL, MSSQL, Mongo, Redis, Parsyph, Hadoop, Cassandra]
+  $InfoSchemaDatasource='TABLE_SCHEMA';
+	
+  $sql='SELECT TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, ORDINAL_POSITION, COLUMN_DEFAULT, IS_NULLABLE, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS';
+
+  $spread=array();
+  $DataObjects=array();
+  $schemainfo=LoadDirect($sql,'INFORMATION_SCHEMA.COLUMNS');
+
+  foreach($schemainfo as $SchemaRow)
+  {
+    $spread[$SchemaRow->data['TABLE_NAME']][$SchemaRow->data['COLUMN_NAME']]=$SchemaRow->data;  
+  }  
+  
+  foreach($spread as $table => $columns)
+  {
+	//Cross-Database Discrepency : MySQL uses quotes, MSSQL uses N
+    $sql='SELECT * FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE WHERE `TABLE_NAME` = "'.$table.'";';
+    $findKeys=LoadDirect($sql,'INFORMATION_SCHEMA.KEY_COLUMN_USAGE');
+
+    $sql='SELECT * FROM INFORMATION_SCHEMA.VIEW_COLUMN_USAGE WHERE `VIEW_NAME` = "'.$table.'";';
+    $keyProperties=LoadDirect($sql,'INFORMATION_SCHEMA.VIEW_COLUMN_USAGE');
+
+    $dObj = new stdClass();
+
+    foreach($findKeys as $row)
+    {
+        $str = explode('_',$row->data['CONSTRAINT_NAME']);
+        if($str[0] == 'PRIMARY') $dObj->PrimaryKey = $row->data['COLUMN_NAME'];
+        else
+		{
+			var_export($row);
+            $dObj->ForeignKey[]=array($row->data['COLUMN_NAME']=>array($row->data['REFERENCED_TABLE_SCHEMA'],$row->data['REFERENCED_TABLE_NAME'],$row->data['REFERENCED_COLUMN_NAME']));
+		}
+    }
+
+    $t=array();
+    foreach($keyProperties as $View)
+    {
+      if($View === reset($keyProperties) )
+      {
+        $t = $spread[$table];
+        $spread[$table]=array();
+      }
+      $spread[$table][$View->data['TABLE_NAME']][$View->data['COLUMN_NAME']] = array_merge($spread[$View->data['TABLE_NAME']][$View->data['COLUMN_NAME']], $View->data);
+    }
+
+    $dObj->Columns = $spread[$table];
+    $dObj->table = $table;
+
+	$classpath='';
+	$ColumnDescriptor=reset($columns);
+	switch( strtolower($ColumnDescriptor[$InfoSchemaDatasource]) )
+	{
+		case 'mysql' :
+		case 'performance_schema': 
+		case 'information_schema': $classpath='schema/'.$ColumnDescriptor[$InfoSchemaDatasource]; break;
+		default: $classpath=$ColumnDescriptor[$InfoSchemaDatasource]; SavePHP($dObj,  $classpath); $classpath=''; break;
+	}
+	
+    SavePHP($dObj,  $classpath);
+  }
+}
 
 
 ?>

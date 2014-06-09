@@ -36,135 +36,127 @@
 *
 *************************************************************************/
 
-
-$ActiveComposition;
-
 require_once('Component.php');
 
 class Composition
 {
+    public static $Active;
     public $DOM;
-    public $ComponentList=Array();
-    
-    public $options;
-    public $meta;
-    public $intents;
+	public $ComponentList=Array();
+    public $InterfaceMode=false;
 
-    public $editable=Array();
+    public $context=array();
+	public $options;
+	public $meta;
+	public $intents;
 
-    function Composition()
-    {
-        global $ActiveComposition;
-        $ActiveComposition = $this;
-    }
+	public $Interfaceable=Array();
 
-    function init($options=array())
-    {
-        global $APPROACH_DOM_ROOT;
-        global $$APPROACH_DOM_ROOT;
-
-        $this->DOM = $$APPROACH_DOM_ROOT;
-        $this->options = $options;
-    }
-    
-    public function ResolveComponents(&$DOM)
-    {
-        $editCount=0;
-        global $APPROACH_EDITMODE;
-        foreach($DOM->children as $child)
-        {
-            if($child instanceof Smart)
-            {
-                if($APPROACH_EDITMODE=false)
-                {
-                  if($child->tag != 'html' && $child->tag != 'head' && $child->tag != 'body' && $child->tag != 'script' && $child->tag != 'style')
-                    $child->classes[] = "editableFeature";
-
-                  foreach($child->context as $WhichComponent => $InstanceContext)
-                  {
-                      $this->editable[$editCount]['name'] = $WhichComponent;
-                      $this->ComponentList[$WhichComponent][]=$InstanceContext;
-                      $this->editable[$editCount]['index'] = count($this->ComponentList[$WhichComponent])-1;
-                      $this->editable[$editCount]['reference']=$child;
-                      $editCount++;
-                  }
-                }
-                else
-                {
-                  foreach($child->context as $WhichComponent => $InstanceContext)
-                  {
-                      $this->ComponentList[$WhichComponent][]=$InstanceContext;
-                  }
-                }
+	function Composition($options=array(), $activiate=false)
+	{
+		if($activiate) $this::$Active =&$this;
+		$this->options = $options;
+	}
+	
+	public function ResolveComponents(&$DOM)
+	{
+		$InterfaceCount=0;
+		foreach($DOM->children as $child)
+		{
+			if($child instanceof Smart)
+			foreach($child->context as $WhichComponent => $InstanceContext)
+			{
+				$this->ComponentList[$WhichComponent][]=$InstanceContext;
+				if($this->InterfaceMode)
+				{
+				  if(!in_array($child->tag,renderable::$NoAutoRender))
+				  {
+					if($child->pageID=='') $child->pageID = $child->tag.'_'.$child->id;
+					$child->classes[] = 'Interface';
+					$child->attributes['data-component']=$WhichComponent;
+					$child->attributes['data-role']='EditGroup';
+					$this->Interfaceable[$InterfaceCount]['name'] = $WhichComponent;
+					$this->Interfaceable[$InterfaceCount]['index'] = count($this->ComponentList[$WhichComponent])-1;
+					$this->Interfaceable[$InterfaceCount]['reference']=$child;
+					$InterfaceCount++;
+				  }
+				}
             }
-            if($child->children != null) $this->ResolveComponents($child);
-        }
-    }
+			if($child->children != null) $this->ResolveComponents($child);
+		}
+	}
 
-    function publish($silent=false)
-    {
-        global $RegisteredScripts;
+	function ActivateInterface()
+	{
+		foreach($this->Interfaceable as &$Interfaceable)
+		{
+			$references=array();
+			if(!empty($Interfaceable['reference']->children))
+			{
+                $refCount=0;
+				foreach($Interfaceable['reference']->children as $child)
+				{
+                    if($child->pageID=='') $child->pageID = $child->tag.'_'.$child->id;
+					$child->classes[]='controls';
+                    $child->attributes['data-role']='Interfaceable';
+                    $child->attributes['data-component']=$Interfaceable['name'];
+                    $child->attributes['data-self']=$refCount;
+					$references[]=$child->pageID;
+                    ++$refCount;
+				}
+			}
+			$Interfaceable['reference']=$references;	//Links to child template's $tokens['__self_id']
+		}
+	}
 
-        global $APPROACH_DOM_ROOT;
-        global $$APPROACH_DOM_ROOT;
-        global $ApproachDebugConsole;
-        global $ApproachDebugMode;
+	function prepublish($silent=false)
+	{
+		$this->ResolveComponents($this->DOM);
+	}
+	
+	function publish($silent=false)
+	{
+		global $RegisteredScripts;
 
-        $$APPROACH_DOM_ROOT = $this->DOM;
+		global $ApproachDebugConsole;
+		global $ApproachDebugMode;
 
-        $this->ResolveComponents($this->DOM);
+		$this->ResolveComponents($this->DOM);
 
-        foreach($this->ComponentList as $ComponentInstance => $Instances)
-        {
-            $test='asdf';
-            foreach($Instances as $Context)
-            {
-                $Component = new $ComponentInstance();
-                $Component->createContext($Context['render'], $Context['data'], $Context['template']);
-                $Component->Load($Context['options']);
-            }
-        }
-        foreach($this->editable as &$editableFeature)
-        {
-            $references=array();
-            if($editableFeature['reference']->children != null)
-            {
-                foreach($editableFeature['reference']->children as $child)
-                {
-                    $child->classes[]='editable';
-                    $references[]=$child->pageID;
-                }
-            }
-            $editableFeature['reference']=array();
-            $editableFeature['reference']=$references;      //Links to child template's $tokens['__self_id']
-        }
-
-        $json=json_encode($this->editable);
+		foreach($this->ComponentList as $ComponentName => $Instances)
+		{
+			foreach($Instances as $Context)
+			{
+				$Component = new $ComponentName();
+				$Component->createContext($Context['self'], $Context['render'], $Context['data'], $Context['template']);
+				$Component->Load($Context['options']);
+				//$this->DOM->children[1]->children[count($this->DOM->children[1]->children)-1]->content=var_export($Component,true);
+			}
+		}
+		$this->ActivateInterface();
 
 /*
-        RegisterJQueryEvent('BUBBLE_CLASS_CLICK', 'editableFeature', $SettingsServiceCall);
+        RegisterJQueryEvent('BUBBLE_CLASS_CLICK', 'InterfaceableFeature', $SettingsServiceCall);
         RegisterJQueryEvent('BUBBLE_ID_CLICK', 'ApproachControlUnit', $UpdateServiceCall .PHP_EOL. $PreviewServiceCall);
         RegisterScript($JqueryReadyFunction, true, "To Feature Editor");
         CommitJQueryEvents();
 */
+		foreach($this->DOM->children as $child)   //Get Body
+		{
+			if($child->tag == 'body')
+			{
+				if($ApproachDebugMode)  $child->children[]=$ApproachDebugConsole;
+				$child->children[]=$RegisteredScripts;
+				break;
+			}
+		}
 
-        foreach($this->DOM->children as $child)   //Get Body
-        {
-            if($child->tag == 'body')
-            {
-                if($ApproachDebugMode)  $child->children[]=$ApproachDebugConsole;
-                $child->children[]=$RegisteredScripts;
-                break;
-            }
-        }
-
-        /*  THIS IS WHERE THE HEADER SHOULD GET SENT    */
-        header('Access-Control-Allow-Origin: *');
-	if(!$silent) print_r('<!DOCTYPE html>'.PHP_EOL.$this->DOM->render()); //Deploy html response - usually
-        elseif($silent && isset($this->options['toFile'])) toFile($this->options['toFile'], $this->DOM->render());
+		/*  THIS IS WHERE THE HEADER SHOULD GET SENT	*/
+//		header('Access-Control-Allow-Origin: *');
+        if(!$silent) print_r('<!DOCTYPE html>'.PHP_EOL.$this->DOM->render()); //Deploy html response - usually
+		elseif($silent && isset($this->options['toFile'])) toFile($this->options['toFile'], $this->DOM->render());
 	
-    }
+	}
 }
-
 
 ?>
