@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8" />
+	<title>Approach Command Console - WARNING NOT FULY FUNCTIONAL</title>
+
+	<link rel="stylesheet" id="fontawesome-css" href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.min.css?ver=4.0.3" type="text/css" media="all">
+	<link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+	<link rel="stylesheet" type="text/css" href="../css/acc.css" />
+
+	<script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.js"></script>
+	<script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.4/jquery-ui.min.js"></script>
+	<script type="text/javascript" src="../js/acc.js"></script>
+</head>
+<body>
+<div id="Dynamics" class="Canvas">
+	<div id="terminal" class="InterfaceLayout"></div>
+	<div id="debug" class="InterfaceLayout"></div>
+</div>
+<div class="Interface">
+	<div class="InterfaceLayout">
+			<ul class="Header controls">
+
+				<li data-role="revert" class="ToggleButton fa fa-refresh pull-left"></li>
+				<li data-role="help" class="ToggleButton fa fa-question-circle pull-left" alt="Get Support"></li>
+				<li class="title">{[ UserName ]} - Command Console</li>
+				<li data-role="closer" class="ToggleButton fa fa-times-circle down pull-right" ></li>
+				<li data-role="collapse" class="ToggleButton fa fa-chevron-circle-down pull-right"></li>
+				<li class="InterfaceMenu">
+						<ul class="DropDown">
+							<li>
+									<span data-role="MenuLabel">Composition</span>
+									<ul class="DropMenu">
+										<li data-role="MenuButton" data-intent="{&quot;APPEND&quot;: {&quot;Composition&quot;: &quot;Wizard&quot;} }" >New Composition Wizard</li>
+										<li data-role="MenuButton" data-intent="{&quot;APPEND&quot;: {&quot;Composition&quot;: &quot;Browser&quot;} }" >Composition Browser</li>
+										<li data-role="MenuButton" data-intent="{&quot;APPEND&quot;: {&quot;Composition&quot;: &quot;Save&quot;} }" >Save Composition</li>
+										<li class="MenuSeparator"></li>
+										<li data-role="MenuButton" data-intent="{&quot;APPEND&quot;: {&quot;Composition&quot;: &quot;Preview&quot;} }" >Composition Preview</li>
+										<li data-role="MenuButton" data-intent="{&quot;APPEND&quot;: {&quot;Composition&quot;: &quot;Settings&quot;} }" >Composition Settings</li>
+										<li class="MenuSeparator"></li>
+										<li data-role="MenuButton" data-intent="{&quot;APPEND&quot;: {&quot;Composition&quot;: &quot;Revert&quot;} }" >Composition Revert</li>
+										<li data-role="MenuButton" data-intent="{&quot;APPEND&quot;: {&quot;Composition&quot;: &quot;Revert&quot;} }" >Composition Rollback</li>
+									</ul>
+							</li>
+						</ul>
+						<ul class="DropDown">
+							<li>
+									<span data-role="MenuLabel">Application</span>
+									<ul class="DropMenu">
+										<li data-role="MenuButton" data-intenet="{&quot;APPEND&quot;: {&quot;Application&quot;: &quot;Static.New&quot;} }" >New Static Package..</li>
+										<li data-role="MenuButton" data-intenet="{&quot;APPEND&quot;: {&quot;Application&quot;: &quot;Dynamic.New&quot;} }" >New Dynamic Package..</li>
+										<li class="MenuSeparator"></li>
+										<li data-role="MenuButton" data-intenet="{&quot;APPEND&quot;: {&quot;Application&quot;: &quot;Save&quot;} }" >Save Selected Application(s)</li>
+										<li class="MenuSeparator"></li>
+										<li data-role="MenuButton" data-intent="{&quot;APPEND&quot;: {&quot;Application&quot;: &quot;Search&quot;} }" >Find Packages on Instance..</li>
+										<li data-role="MenuButton" data-intent="{&quot;APPEND&quot;: {&quot;Application&quot;: &quot;Browse&quot;} }" >Application Library..</li>
+										<li data-role="MenuButton" data-intent="{&quot;APPEND&quot;: {&quot;User&quot;: &quot;Dashboard.View&quot;} }" >{[ UserName }]'s Packages..</li>
+										<li data-role="MenuButton" data-intent="{&quot;APPEND&quot;: {&quot;Application&quot;: &quot;Revision&quot;} }" >Application Rollback</li>
+									</ul>
+							</li>
+						</ul>
+						<ul class="DropDown">
+							<li>
+									<span data-role="MenuLabel">Media</span>
+									<ul class="DropMenu">
+										<li data-role="MenuButton" data-intent="{&quot;APPEND&quot;: {&quot;Media&quot;: &quot;Create&quot;} }" >Create Media..</li>
+										<li data-role="MenuButton" data-intent="{&quot;APPEND&quot;: {&quot;Media&quot;: &quot;Browse&quot;} }" >Media Library..</li>
+										<li data-role="MenuButton" data-intent="{&quot;APPEND&quot;: {&quot;Media&quot;: &quot;Browse&quot;} }" >Import From Feed..</li>
+										<li data-role="MenuButton" data-intent="{&quot;APPEND&quot;: {&quot;Media&quot;: &quot;Upload&quot;} }" >Upload Media..</li>
+										<li class="MenuSeparator"></li>
+										<li data-role="MenuButton" data-intent="{&quot;APPEND&quot;: {&quot;Media&quot;: &quot;Group&quot;} }" >Group Media</li>
+										<li data-role="MenuButton" data-intent="{&quot;APPEND&quot;: {&quot;Media&quot;: &quot;Ungroup&quot;} }" >Ungroup Media</li>
+										<li class="MenuSeparator"></li>
+										<li data-role="MenuButton" data-intent="{&quot;APPEND&quot;: {&quot;Media&quot;: &quot;Group&quot;} }" >Distrubution &amp; C DN</li>
+										<li data-role="MenuButton" data-intent="{&quot;APPEND&quot;: {&quot;Media&quot;: &quot;Ungroup&quot;} }" >Update Frequency</li>
+										<li class="MenuSeparator"></li>
+										<li data-role="MenuButton" data-intent="{&quot;APPEND&quot;: {&quot;Media&quot;: &quot;Revision&quot;} }" >Media Rollback</li>
+									</ul>
+							</li>
+						</ul>
+				</li>
+			</ul>
+			<ul class="Content">
+				<li class="InputRegion">
+						<form action="//service.nicegamez.com/action.php" method="POST" target="_blank" enctype="multipart/form-data" name="UploadForm">
+							<ul class="controls">
+									<li class="linetext">
+										<input type="text" class="blocktext" name="ApplicationMetaTitle" value="Default Title" />
+									</li>
+									<li class="blocktext">
+										<textarea rows="5" name="post_content" >Data fields here.
+jQuery can change the display easily.
+
+Services are smart at delivering and applying deltas through data tokens.</textarea>
+									</li>
+									<li class="upload mediabrowse">
+										<input type="file" size="24" name="file" />
+									</li>
+							</ul>
+							<input type="submit" value="Save" class="DarkGreen Button" />
+						</form>
+				</li>
+			</ul>
+			<ul class="Footer"></ul>
+	</div>
+</div>
+</body>
+</html>

@@ -33,7 +33,7 @@ global $ApproachDebugConsole;
 //if(!isset($ApproachServiceCall)) $ApproachServiceCall = true;
 if(!isset($RuntimePath)) $RuntimePath = __DIR__.'/../..'; //if no runtime path, escape from the approach directory
 
-$ApproachDebugConsole = new renderable('li', 'ApproachDebugConsole');
+$ApproachDebugConsole = new renderable('div', 'ApproachDebugConsole');
 $ApproachDebugMode = false;
 function approach_dump($refer)
 {
