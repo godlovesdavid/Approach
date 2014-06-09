@@ -45,7 +45,6 @@ class Component
 {
     public static $ComponentName = 'Component';
     public static $SaveFlag = array();
-	public static $Active;
 	public $context = array();
 	protected $UpdateDataclass=array();
 	
@@ -80,8 +79,9 @@ class Component
 		*********************************************/
 
 		//Default Values
-		if(empty($this->ContainerClasses))	$this->ContainerClasses	=Array($this::$ComponentName.'Container');
-		if(empty($this->ParentContainer))	$this->ParentContainer	= &$root;//GetRenderable($this->context['root'],$this->context['render']);
+		if(!isset($this->ContainerClasses))	$this->ContainerClasses	=Array($this::$ComponentName.'Container');
+		if(!isset($this->ChildClasses))		$this->ChildClasses		=Array($this::$ComponentName);
+		if(!isset($ParentContainer))		$this->ParentContainer	= &$root;//GetRenderable($this->context['root'],$this->context['render']);
 
 		if(is_array($options))
 		{
@@ -104,8 +104,8 @@ class Component
 	}
 	function edit()
 	{
-		//stub, for web services later
 		$miniDOM = new renderable('div');
+
 		return $ResultString = $miniDOM->render();
 	}
 
@@ -161,8 +161,6 @@ class Component
 				}
 			}
 		}
-		
-		$this->PreLoad($this->context['data']);
 
 		/*	END FETCHING OPTIONAL VALUES	*/
 		/* ---------------------------------*/
@@ -188,32 +186,29 @@ class Component
 			}
 		}
 
-		if(!empty($BuildData))	$this->Process($BuildData);
-		else{ return false; }
+		$this->Process($BuildData);
 	}
+
 
 	function Process(&$BuildData)
 	{
 		$this->PreProcess($BuildData);
         $TemplateCount=$this->AlignMarkup();
-		$Children=array();
-		
 		for($i=0, $L=$TemplateCount; $i<$L; ++$i)
 		{
 			$c=0;
-			if(!isset($this->ChildClasses[$c]))		$this->ChildClasses[$c]		=array($this::$ComponentName.'_'.$c);
 			foreach($BuildData as $ConsolidatedRow)
 			{
 				//Send Data From Database To Rendering Engine
 				$SmartObject = new $this->RenderType(array('tag'=>$this->ChildTag[$i],'template' => $this->context['template'], 'markupindex' => $i) );
 				$SmartObject->tokens['__self_index']=$c;
 
-				$SmartObject->data[$this::$ComponentName] = (!empty($SmartObject->data[$this::$ComponentName])) ?
-					array_merge($SmartObject->data[$this::$ComponentName], $ConsolidatedRow) : $SmartObject->data[$this::$ComponentName]=$ConsolidatedRow;
+				$SmartObject->data[$this::$ComponentName] = (isset($SmartObject->data[$this::$ComponentName])) ?
+				array_merge($SmartObject->data[$this::$ComponentName], $ConsolidatedRow) : $SmartObject->data[$this::$ComponentName]=$ConsolidatedRow;
 				$SmartObject->classes = (is_array($SmartObject->classes)) ?
-					array_merge($SmartObject->classes, $this->ChildClasses[$i]) : $this->ChildClasses[$i];
+				array_merge($SmartObject->classes, $this->ChildClasses[$i]) : $this->ChildClasses[$i];
 				$SmartObject->attributes =(is_array($SmartObject->attributes)) ?
-					array_merge($SmartObject->attributes, $this->ChildAttributes[$i]) : $this->ChildAttributes[$i];
+				array_merge($SmartObject->attributes, $this->ChildAttributes[$i]) : $this->ChildAttributes[$i];
 
 				$Children[]=$SmartObject;
 				$this->HandleChildScripts($SmartObject);
@@ -227,9 +222,8 @@ class Component
 		$this->ParentContainer->classes = array_merge($this->ParentContainer->classes, $this->ContainerClasses);
 		$this->PostProcess($BuildData, $this->ParentContainer);
 	}
-	function PreLoad(&$DataOptions){}
-	function PreProcess(&$BuildData){   return true; }
-	function PostProcess(&$BuildData, &$ParentContainer){}
+	function PreProcess(&$BuildData){   /* $this->ParentContainer->children[]= $t=new renderable('div');    */  }
+	function PostProcess(&$BuildData){}
 
 	function Save($IncomingTokens, $TemplateBinding)
 	{

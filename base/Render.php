@@ -35,12 +35,11 @@ class renderable
 	public $tag='div';
 	public $classes=Array();
 	public $attributes=Array();
-	public $content='';		//If content and children both empty, tag is <selfcontained />
+	public $content=null;		//If content and children both empty, tag is <selfcontained />
 	public $children=Array();
 
-	public $prefix=null;
-	public $infix=null;
-	public $postfix=null;
+	public $preFilter=null;
+	public $postFilter=null;
 	public $selfContained=false;
 
 	function renderable($t='div', $pageID='', $options=array())
@@ -48,19 +47,20 @@ class renderable
 		$this->id=renderable::$renderObjectIndex;
 		renderable::$renderObjectIndex++;				/*	Register New Renderable	*/
 
-		if( is_array($t) ){ $options = array_merge($t,$options); $this->tag= isset($options['tag']) ? $options['tag'] : 'div';}
+	if( is_array($t) ){ $options = array_merge($t,$options); $this->tag= isset($options['tag']) ? $options['tag'] : 'div';}
 		else $this->tag = $t;
-	
-	
-		if( is_array($pageID) ){ $options = array_merge($pageID,$options); $this->pageID= isset($options['pageID']) ? $options['pageID'] : get_class($this) . $this->id;}
-		else $this->pageID = $pageID;	
-			
+
+
+	if( is_array($pageID) ){ $options = array_merge($pageID,$options); $this->pageID= isset($options['pageID']) ? $options['pageID'] : get_class($this) . $this->id;}
+	else $this->pageID = $pageID;	
+		
 		if(isset($options['pageID']) )	$this->pageID = $options['pageID'];
 		if(isset($options['template'])) $this->content = GetFile($options['template']);
 		if(isset($options['classes']) ) $this->classes = $options['classes'];
 		if(isset($options['attributes'])) $this->attributes = $options['attributes'];
 		if(isset($options['selfcontained'])) $this->selfContained = $options['selfcontained'];
 		if(isset($options['content'])) $this->content = $options['content'] . $this->content;
+
 		if(in_array($this->tag,renderable::$NoAutoRender)) $this->pageID='';
 	}
 
@@ -84,6 +84,9 @@ class renderable
 		{
 			return ' class="'.get_class($this) .' '. get_class($this) .'_'.$this->id . '" ';
 		}
+//		if($this->classes == ' class=" " ' || $this->classes == ' class="" ') $this->classes = '';
+//		 if($this->attributes === 0){ $this->attributes = '';	 }
+
 	}
 	public function buildContent()
 	{
@@ -197,6 +200,6 @@ class renderable
 
 
 
-require_once(__DIR__.'/Utility.php');
+//require_once(__DIR__.'/Utility.php');
 
 ?>

@@ -1,0 +1,42 @@
+<Template xmlns:Component="Component://approach.im" xmlns:Render="Render://approach.im">
+	<Component:Message type="json">
+	{
+		"messages":
+		{
+			"title" : "MessageHeading",
+			"message" : "MessageContent",
+			"post_date" : "DatePosted",
+			"up_votes" : "VotesUp",
+			"down_votes" : "VotesDown",
+			"id" : "MessageID"
+		},
+		"users":
+		{
+			"display_name" : "Alias",
+			"username" : "Name"
+		}
+	}
+	</Component:Message>
+	
+	<Render:Markup bind="Message" tag="ul" class="MediaList">
+	<li class="instance">
+		<ul class="profile">
+			<li class="avatar"><a class="pull-left" href="//dev.approach.im/users/[@ Name @]"><img class="media-object" src="//static-dev.approach.im/img/display/approach.png" alt="" /></a></li>
+			<li class="alias"><a href="//dev.approach.im/users/[@ Name @]"><em>[@ Alias @]</em></a></li>
+			<li class="post-date">[@ DatePosted @]</li>
+		</ul>
+		<ul class="contents">
+			<li class="heading"><h3>[@ MessageHeading @]</h3></li>
+			<li class="body"><article>[@ MessageContent @]</article></li>
+			<li class="social">
+				<span class="vote">
+					<button class="fa fa-caret-up" >[@ VotesUp @]</button>
+					<button class="fa fa-caret-down">[@ VotesDown @]</button>
+				</span>
+				<!--name is MessageID for figuring out which message is being replied to-->
+				<button class="btn" method="get" name="[@ MessageID" style="background-color: #8181F7; font-size: 16px; font-weight: 900; color: #eee; border-radius: 64px; margin: 2px;border: 1px solid #C3C781; " >Reply</button>
+			</li>
+		</ul>
+	</li>
+	</Render:Markup>
+</Template>

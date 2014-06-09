@@ -51,6 +51,9 @@ if(!isset($RuntimePath)) $RuntimePath=$_SERVER['DOCUMENT_ROOT'];	//Included from
 $tableName='NULL TABLE';
 $currentTable;
 
+
+//UpdateSchema();
+
 class Dataset
 {
     public $data,$options;
@@ -351,8 +354,8 @@ function SavePHP($dbo,$classpath='')
   $theOutput .= $LinePrefix.'public $data;';
   $theOutput .= PHP_EOL.'}'.PHP_EOL.'?>';
 
-  if (!is_dir($RuntimePath . '/support/datasets/' .$classpath))	mkdir($RuntimePath . '/support/datasets/' .$classpath, 01740, true);
-  fileSave($RuntimePath . '/support/datasets/' .$classpath.'/'. $dbo->table . '.php', $theOutput);
+//  print_r($theOutput);	$RuntimePath . '/support/datasets/' 
+  fileSave($RuntimePath . 'support/datasets/' .$classpath.'/'. $dbo->table . '.php', $theOutput);
 }
 
 
@@ -389,7 +392,7 @@ function LoadDirect($query,$t='information_schema')
 function UpdateSchema()
 {
   //need switch() case: for database type [MySQL, MSSQL, Mongo, Redis, Parsyph, Hadoop, Cassandra]
-  $InfoSchemaDatasource='TABLE_SCHEMA';
+  $InfoSchemaDatabaseColumn='TABLE_SCHEMA';
 	
   $sql='SELECT TABLE_CATALOG, TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME, ORDINAL_POSITION, COLUMN_DEFAULT, IS_NULLABLE, DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS';
 
@@ -413,15 +416,15 @@ function UpdateSchema()
 
     $dObj = new stdClass();
 
+//	var_dump($keyProperties);
     foreach($findKeys as $row)
     {
         $str = explode('_',$row->data['CONSTRAINT_NAME']);
-        if($str[0] == 'PRIMARY') $dObj->PrimaryKey = $row->data['COLUMN_NAME'];
+//		if($table == 'compositions'){ var_export($row); }
+        if($str[0] == 'PRIMARY')
+            $dObj->PrimaryKey = $row->data['COLUMN_NAME'];
         else
-		{
-			var_export($row);
             $dObj->ForeignKey[]=array($row->data['COLUMN_NAME']=>array($row->data['REFERENCED_TABLE_SCHEMA'],$row->data['REFERENCED_TABLE_NAME'],$row->data['REFERENCED_COLUMN_NAME']));
-		}
     }
 
     $t=array();
@@ -439,15 +442,12 @@ function UpdateSchema()
     $dObj->table = $table;
 
 	$classpath='';
-	$ColumnDescriptor=reset($columns);
-	switch( strtolower($ColumnDescriptor[$InfoSchemaDatasource]) )
+	foreach($spread[$table] as $column )
 	{
-		case 'mysql' :
-		case 'performance_schema': 
-		case 'information_schema': $classpath='schema/'.$ColumnDescriptor[$InfoSchemaDatasource]; break;
-		default: $classpath=$ColumnDescriptor[$InfoSchemaDatasource]; SavePHP($dObj,  $classpath); $classpath=''; break;
+		$classpath=(strtolower($column[$InfoSchemaDatabaseColumn])=='information_schema') ? 'schema':'';
+		break;
 	}
-	
+
     SavePHP($dObj,  $classpath);
   }
 }
