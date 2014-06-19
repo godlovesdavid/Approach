@@ -24,44 +24,64 @@
 
 
 
-class renderable
+class Renderable
 {
-	public static $renderObjectIndex=0;
+	public static $lastidx=0;
 	public static $NoAutoRender=array('html', 'head', 'body', 'script', 'style', 'channel', 'rss', 'item','title');
 	
 	public $id=null;
 	public $pageID='';
 
 	public $tag='div';
-	public $classes=Array();
-	public $attributes=Array();
+	public $classes=[];
+	public $attributes=[];
 	public $content=null;		//If content and children both empty, tag is <selfcontained />
-	public $children=Array();
+	public $children=[];
 
 	public $preFilter=null;
 	public $postFilter=null;
 	public $selfContained=false;
 
-	function renderable($t='div', $pageID='', $options=array())
+	function Renderable($t='div', $pageID='', $options=[])
 	{
-		$this->id=renderable::$renderObjectIndex;
-		renderable::$renderObjectIndex++;				/*	Register New Renderable	*/
+		$this->id=renderable::$lastidx;
+		renderable::$lastidx++;	/*	Register New Renderable	*/
 
-	if( is_array($t) ){ $options = array_merge($t,$options); $this->tag= isset($options['tag']) ? $options['tag'] : 'div';}
-		else $this->tag = $t;
-
-
-	if( is_array($pageID) ){ $options = array_merge($pageID,$options); $this->pageID= isset($options['pageID']) ? $options['pageID'] : get_class($this) . $this->id;}
-	else $this->pageID = $pageID;	
-		
-		if(isset($options['pageID']) )	$this->pageID = $options['pageID'];
-		if(isset($options['template'])) $this->content = GetFile($options['template']);
-		if(isset($options['classes']) ) $this->classes = $options['classes'];
-		if(isset($options['attributes'])) $this->attributes = $options['attributes'];
-		if(isset($options['selfcontained'])) $this->selfContained = $options['selfcontained'];
-		if(isset($options['content'])) $this->content = $options['content'] . $this->content;
-
-		if(in_array($this->tag,renderable::$NoAutoRender)) $this->pageID='';
+		if(is_array($t))
+		{ 
+			$options = array_merge($t,$options); 
+			$this->tag= isset($options['tag']) ? $options['tag'] : 'div';
+		}
+		else 
+		{
+			$this->tag = $t;
+		}
+	
+		if(is_array($pageID))
+		{ 
+			$options = array_merge($pageID,$options); 
+			$this->pageID = isset($options['pageID']) ? $options['pageID'] : get_class($this) . $this->id;
+		}
+		else 
+		{
+			$this->pageID = $pageID;
+		}
+			
+		if(isset($options['pageID']) )	
+			$this->pageID = $options['pageID'];
+		if(isset($options['template'])) 
+			$this->content = GetFile($options['template']);
+		if(isset($options['classes']) ) 
+			$this->classes = $options['classes'];
+		if(isset($options['attributes'])) 
+			$this->attributes = $options['attributes'];
+		if(isset($options['selfcontained'])) 
+			$this->selfContained = $options['selfcontained'];
+		if(isset($options['content'])) 
+			$this->content = $options['content'] . $this->content;
+	
+		if(in_array($this->tag,renderable::$NoAutoRender)) 
+			$this->pageID='';
 	}
 
 	public function buildClasses()
@@ -79,7 +99,10 @@ class renderable
 		{
 			return $this->classes = ' class="'.trim($this->classes).'" ';
 		}
-		elseif(in_array($this->tag,renderable::$NoAutoRender)){ return ''; }
+		elseif(in_array($this->tag,renderable::$NoAutoRender))
+		{ 
+			return ''; 
+		}
 		else
 		{
 			return ' class="'.get_class($this) .' '. get_class($this) .'_'.$this->id . '" ';
@@ -88,70 +111,59 @@ class renderable
 //		 if($this->attributes === 0){ $this->attributes = '';	 }
 
 	}
-	public function buildContent()
-	{
-		foreach($this->children as $renderObject)
-		{
-			$this->content .= $renderObject->render();
-		}
-	}
-
 
 	public function parse($string)
 	{
-	static $RecurseCount;
-	static $depth=0;
-	static $Condition=Array();
-	static $Conditions=Array();
-	static $Saved=array();
-	static $begin = 0;
-	static $found=false;
+		static $RecurseCount;
+		static $depth=0;
+		static $Condition=[];
+		static $Conditions=[];
+		static $Saved=[];
+		static $begin = 0;
+		static $found=false;		
 	
-
-	$L=strlen($string);
-	for($i=0; $i < $L; ++$i)
-	{
-		if($string[$i]=='<' && $string[$i+1]=='@' && $string[$i+2] == '-' && $string[$i+3]=='-')	//Start Of Tag Detected
+		$L=strlen($string);
+		for($i=0; $i < $L; ++$i)
 		{
-			if($string[$i+4]==' ' && $string[$i+5]=='/' && $string[$i+6]==' ' && $string[$i+7] == '-' &&
-			 $string[$i+8] == '-' && $string[$i+9] == '@' && $string[$i+10] == '>') //End Injector ' / --@>'
+			if($string[$i]=='<' && $string[$i+1]=='@' && $string[$i+2] == '-' && $string[$i+3]=='-')	//Start Of Tag Detected
 			{
-			$Condition['Close']['Start']=$i;
-			$i=$Condition['Close']['End']=$i+10;
-
-			$Evaluate = substr( $string, $Condition['Open']['Start']+4, $Condition['Open']['End']-$Condition['Open']['Start']-8);
-			$Evaluate .= PHP_EOL . '{ return 1; } '.PHP_EOL.'else{ return -1; }';
-			$Condition['result']=eval( $Evaluate );	//Template expression blocks: Danger, Warning, Danger!
-			}
-			else	//Injector Detected
-			{
-			$Condition['Open']['Start']=$i;
-			$i+=3;
-			}
-			continue;
-		}
-		elseif($string[$i]=='-' && $string[$i+1]=='-' && $string[$i+2] == '@' && $string[$i+3]=='>')	//End Of Tag Detected
-		{
-			$i=$Condition['Open']['End']=$i+3;
-			continue;
-		}
-	}
-
-	foreach($Conditions as $Cursor => $Condition)
-	{
-		$Cursor = $Cursor + 0; //make int?
-
-		//Cut Out the markup *between* any if statments
-		$RecurseCount++;
-		$InnerStatements=substr($string, $Condition['Open']['End']+1, $Condition['Close']['Start'] - $Condition['Open']['End']-1);
-		if($Condition['result']==-1) $InnerStatements ='';
+				if($string[$i+4]==' ' && $string[$i+5]=='/' && $string[$i+6]==' ' && $string[$i+7] == '-' &&
+				 $string[$i+8] == '-' && $string[$i+9] == '@' && $string[$i+10] == '>') //End Injector ' / --@>'
+				{
+					$Condition['Close']['Start']=$i;
+					$i=$Condition['Close']['End']=$i+10;
 		
-		$string=str_replace(substr($string, $Condition['Open']['Start'], $Condition['Close']['End'] - $Condition['Open']['Start']+1 ), $InnerStatements, $string);
-
-		if(strpos($InnerStatements, '<@--') != false) $Saved[]=$this->parse($InnerStatements);
-		$begin=$Condition['Close']['End'];
-	}
-	return $string;
+					$Evaluate = substr( $string, $Condition['Open']['Start']+4, $Condition['Open']['End']-$Condition['Open']['Start']-8);
+					$Evaluate .= PHP_EOL . '{ return 1; } '.PHP_EOL.'else{ return -1; }';
+					$Condition['result']=eval( $Evaluate );	//Template expression blocks: Danger, Warning, Danger!
+				}
+				else	//Injector Detected
+				{
+					$Condition['Open']['Start']=$i;
+					$i+=3;
+				}
+			}
+			elseif($string[$i]=='-' && $string[$i+1]=='-' && $string[$i+2] == '@' && $string[$i+3]=='>')	//End Of Tag Detected
+			{
+				$i=$Condition['Open']['End']=$i+3;
+			}
+		}
+	
+		foreach($Conditions as $Cursor => $Condition)
+		{
+			$Cursor = $Cursor + 0; //make int?
+	
+			//Cut Out the markup *between* any if statments
+			$RecurseCount++;
+			$InnerStatements=substr($string, $Condition['Open']['End']+1, $Condition['Close']['Start'] - $Condition['Open']['End']-1);
+			if($Condition['result']==-1) $InnerStatements ='';
+			
+			$string=str_replace(substr($string, $Condition['Open']['Start'], $Condition['Close']['End'] - $Condition['Open']['Start']+1 ), $InnerStatements, $string);
+	
+			if(strpos($InnerStatements, '<@--') != false) $Saved[]=$this->parse($InnerStatements);
+			$begin=$Condition['Close']['End'];
+		}
+		return $string;
 	}
 
 
@@ -162,7 +174,7 @@ class renderable
 		{
 			foreach($this->attributes as $att=>$val)
 			{
-				if(is_array($val) )
+				if(is_array($val))
 				{
 					foreach($val as $_att=>$_val)
 					{
@@ -170,36 +182,48 @@ class renderable
 					}
 					return $this->attributes=$attribsToString;
 				}
-				else $attribsToString .= $att . '="'.$val.'" ';
+				else 
+				{
+					$attribsToString .= $att . '="'.$val.'" ';
+				}
 			}
 			return $this->attributes=$attribsToString;
 		}
-		else if(is_string($this->attributes))	return ' '.$this->attributes.' ';	
-		else	$attribsToString = ' data-approach-error="ATTRIBUTE_RENDER_ERROR" ';
+		elseif(is_string($this->attributes))	
+			return ' '.$this->attributes.' ';	
+		else	
+			$attribsToString = ' data-approach-error="ATTRIBUTE_RENDER_ERROR" ';
 		
 		return $this->attributes=$attribsToString;
 	}
 
-	public function render()
+	/**
+	*	Give a string representation of this tag and its children.
+	*/
+	public function render($level = 0)
 	{
-		$OutputStream='';
-		$FrontendMarkup=$this->content;
-		$this->content='';
-		$this->buildContent();
- 
-		$OutputStream = '<' . $this->tag .
-			( $this->pageID != ''		?	' id="'.$this->pageID.'" '	: '')	.
-			( isset($this->attributes)	?	$this->buildAttributes()	: '')	.
-			( isset($this->classes)		?	$this->buildClasses()		: '')	.
-			($this->selfContained 		?	'/>'.PHP_EOL				: '>'	.
-			$FrontendMarkup . $this->content . '</' . $this->tag . '>' . PHP_EOL);
+		$markup = $this->content;
+		$this->content = '';
+		
+		//make indents.
+		$indent = "";
+		for ($i = 0; $i < $level; $i++)
+			$indent .= "\t";
+		$childrenindent = $indent . "\t";
+		
+		//render children.
+		$childlevel = $level+1;
+		foreach($this->children as $renderable)
+			$this->content .= PHP_EOL . $childrenindent . $renderable->render($childlevel) . $indent;
 
-		return $OutputStream;
+		//write attributes and classes for own tag, and close it.
+		return '<' . $this->tag .
+			($this->pageID != ''		?	' id="' . $this->pageID .'"': '')	.
+			(isset($this->attributes)	?	$this->buildAttributes()	: '')	.
+			(isset($this->classes)		?	$this->buildClasses()		: '')	.
+			($this->selfContained 		?	'/>' . PHP_EOL  			: '>' .	$markup
+			 . $this->content . '</' . $this->tag . '>' . PHP_EOL);
 	}
 }
-
-
-
 //require_once(__DIR__.'/Utility.php');
-
 ?>
