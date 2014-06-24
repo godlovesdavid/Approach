@@ -26,7 +26,7 @@ foreach($items as $item)
             );
 */      
       $Label=new renderable(array('tag'=>'li','classes'=>array('Label')));
-//      $Container=new SmartTag($options);
+//      $Container=new Smart($options);
       $Label-> content =
             '<h1 class="title" style="float:left;margin-bottom:11px;"><a href="'
              .'/'.$DeployPath.'/'.$item->data['alias']

@@ -1,7 +1,7 @@
 <?php
 
 /*
-	Title: Tag Utility Functions for Approach
+	Title: Renderale Utility Functions for Approach
 
 
 	Copyright 2002-2014 Garet Claborn
@@ -21,7 +21,7 @@
 */
 
 
-require_once('Tag.php');
+require_once('Render.php');
 global $RuntimePath;
 global $InstallPath;
 global $UserPath;
@@ -31,10 +31,9 @@ global $ApproachDebugMode;
 global $ApproachDebugConsole;
 
 //if(!isset($ApproachServiceCall)) $ApproachServiceCall = true;
-if(!isset($RuntimePath)) 
-	$RuntimePath = __DIR__.'/../..'; //if no runtime path, escape from the approach directory
+if(!isset($RuntimePath)) $RuntimePath = __DIR__.'/../..'; //if no runtime path, escape from the approach directory
 
-$ApproachDebugConsole = new Tag('div', 'ApproachDebugConsole');
+$ApproachDebugConsole = new renderable('div', 'ApproachDebugConsole');
 $ApproachDebugMode = false;
 function approach_dump($refer)
 {
@@ -47,44 +46,45 @@ function approach_dump($refer)
 
 /*
 
-These functions let you primarily search through types of class Tag by
+These functions let you primarily search through types of class renderable by
 common CSS selectors such as ID, Class, Attribute and Tag. 
 
 Also the JavaScript Events have a require listed at the bottom of this source
-JavaScript events need to look for your </head> element *or* the </body> elemenet
+JavaScript events need to look for your </head> element *or* the  </body> elemenet
 and dynamically place event bindings, script linking or direct code at these 
 locations.
 
 
 Use 
 
-$Collection = RenderSearch($anyTag,'.Buttons'); 
+$Collection = RenderSearch($anyRenderable,'.Buttons'); 
 
 Or Directly
 
 
-$SingleTag=function GetTag($SearchRoot, 1908);                       //System side render ID $Tag->id;
-$SingleTag=function GetTagByPageID($root,'MainContent');             //Client side page ID
+$SingleTag=function GetRenderable($SearchRoot, 1908);                       //System side render ID $renderable->id;
+$SingleTag=function GetRenderableByPageID($root,'MainContent');             //Client side page ID
 
-$MultiElements=function GetTagsByClass($root, 'Buttons');
-$MultiElements=function GetTagsByTag($root, 'div');
+$MultiElements=function GetRenderablesByClass($root, 'Buttons');
+$MultiElements=function GetRenderablesByTag($root, 'div');
+
 
 */
 
-function filterXML( $label, $content, $styles, $properties)
+function filterXML( $tag, $content, $styles, $properties)
 {
-    $output='<' . $label;
-    
+    $output='<' . $tag;
     foreach($this->$properties as $property => $value)
+    {
         $output .= ' '.$property.'="'.$value.'"';
-        
+    }
     $output .= ' class="';
-    
     foreach($this->$styles as $class)
+    {
         $output .= $class.' ';
-        
-    $output .= '"'. 'id="'.$label . $this->$id . '">';
-    $output .=$content . '</'.$label.'>';
+    }
+    $output .= '"'. 'id="'.$tag . $this->$id . '">';
+    $output .=$content . '</'.$tag.'>';
 }
 
 function toFile($filename, $data)
@@ -99,37 +99,36 @@ function GetFile($path, $override=false)
 {
     //return file_get_contents($path);
     global $APPROACH_REGISTERED_FILES;
-    
-    if(!isset($APPROACH_REGISTERED_FILES[$path]) || $override) 
-    	$APPROACH_REGISTERED_FILES[$path] = file_get_contents($path);
-    	
+    if(!isset($APPROACH_REGISTERED_FILES[$path]) || $override) $APPROACH_REGISTERED_FILES[$path] = file_get_contents($path);
     return $APPROACH_REGISTERED_FILES[$path];
 
 }    //Local Scope File Caching
 
 function curl($url)
 {
-	$ch = curl_init();
-	curl_setopt($ch, CURLOPT_URL, $url);
-	curl_setopt($ch, CURLOPT_RETURNTRANSFER,1);
-	$data = curl_exec($ch);
-	curl_close($ch);
-	return $data;
+  $ch = curl_init();
+  curl_setopt($ch, CURLOPT_URL, $url);
+  curl_setopt($ch, CURLOPT_RETURNTRANSFER,1);
+  $data = curl_exec($ch);
+  curl_close($ch);
+  return $data;
 }
 function Blame($Container)
 {
     $Reason='';
     foreach($Container as $key => $value)
+    {
         $Reason.=('Key: '. $key .' Value: '. $value ."\r\n");
-        
+    }
     exit($Reason);
 }
 function Complain($Container)
 {
     $Reason='';
     foreach($Container as $key => $value)
+    {
         $Reason.=('Key: '. $key .' Value: '. $value ."\r\n");
-    
+    }
     print_r($Reason);
     return false;
 }
@@ -149,23 +148,23 @@ function RenderSearch(&$root, $search)
     $renderObject;
     switch($scope)
     {
-        case '@': $renderObject=GetTag($root, $search); break;
-        case '#': $renderObject=GetTagByPageID($root, $search); break;
-        case '.': $renderObject=GetTagsByClass($root, $search); break;
-        default: $renderObject=GetTagByTag($root, $search); break;
+        case '@': $renderObject=GetRenderable($root, $search); break;
+        case '#': $renderObject=GetRenderableByPageID($root, $search); break;
+        case '.': $renderObject=GetRenderablesByClass($root, $search); break;
+        default:  $renderObject=GetRenderableByTag($root, $search); break;
     }
 
     return $renderObject;
 }
 
-function GetTag(&$SearchRoot, $SearchID)
+function GetRenderable(&$SearchRoot, $SearchID)
 {
     if($SearchRoot->id == $SearchID) return $SearchRoot;
 
     foreach($SearchRoot->children as $renderObject)
     {
-            $result = GetTag($renderObject,$SearchID);
-            if($result instanceof Tag)
+            $result = GetRenderable($renderObject,$SearchID);
+            if($result instanceof renderable)
             {
                 if($result->id == $SearchID) return $result;
             }
@@ -174,25 +173,25 @@ function GetTag(&$SearchRoot, $SearchID)
 
 
 
-function GetTagsByTag(&$root, $label)
+function GetRenderablesByTag(&$root, $tag)
 {
     $Store=Array();
 
     foreach($root->children as $child)   //Get Head
     {
-        if($child->label == $label)
+        if($child->tag == $tag)
         {
             $Store[]=$child;
         }
         foreach($child->$children as $children)
         {
-            $Store = array_merge($Store, GetTagsByTag($children, $label));
+            $Store = array_merge($Store, GetRenderablesByTag($children, $tag));
         }
     }
     return $Store;
 }
 
-function GetTagsByClass(&$root, $class)
+function GetRenderablesByClass(&$root, $class)
 {
     $Store = array();
 
@@ -207,16 +206,16 @@ function GetTagsByClass(&$root, $class)
         }
         foreach($child->children as $children)
         {
-            $Store = array_merge($Store, GetTagsByClass($children, $class));
+            $Store = array_merge($Store, GetRenderablesByClass($children, $class));
         }
         $child->classes=$t;
     }
     return $Store;
 }
 
-function GetTagByPageID(&$root,$PageID)
+function GetRenderableByPageID(&$root,$PageID)
 {
-    $Store = new Tag('div');
+    $Store = new renderable('div');
     $Store->pageID = 'DEFAULT_ID___ELEMENT_NOT_FOUND';
     foreach($root->children as $child)   //Get Head
     {
@@ -227,7 +226,7 @@ function GetTagByPageID(&$root,$PageID)
         }
         foreach($child->children as $children)
         {
-            $Store = GetTagByPageID($children, $PageID);
+            $Store = GetRenderableByPageID($children, $PageID);
             if($Store->pageID == $PageID) return $Store;
         }
     }
@@ -249,7 +248,7 @@ function ArrayFromURI(&$uri)
         else $result[$i] = strtolower($result[$i]);
     }
 
-    return array_values($result);
+    return  array_values($result);
 }
 
 

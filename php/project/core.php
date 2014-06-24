@@ -30,7 +30,7 @@ require_once($RuntimePath.'/support/_config.php');
 
 require_once($InstallPath.'/base/Renderables/DisplayUnits.php');
 require_once($InstallPath.'/base/Dataset.php');
-require_once($InstallPath.'/base/SmartTag.php');
+require_once($InstallPath.'/base/Smart.php');
 require_once($InstallPath.'/base/ClientEvents.php');
 require_once($InstallPath.'/core/Component.php');
 require_once($InstallPath.'/core/Composition.php'); 

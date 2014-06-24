@@ -37,8 +37,8 @@
 
 
 
-require_once(__DIR__ . '/../base/Tag.php');
-include_once(__DIR__ . '/../base/SmartTag.php');
+require_once(__DIR__ . '/../base/Render.php');
+include_once(__DIR__ . '/../base/Smart.php');
 include_once(__DIR__ . '/../base/Dataset.php');
 
 class Component
@@ -50,14 +50,14 @@ class Component
 	
     /***************************************************************************//*
      * @type string|enum|null $RenderType Defines the class of @see renderable used to contain template results.
-     * @type string|array|null $ChildTag Defines the inner element @see renderable::$label of the templates of  used.  
+     * @type string|array|null $ChildTag Defines the inner element @see renderable::$tag of the templates of  used.  
      * @type string|array|null $ChildClasses Defines the CSS $see renderable::classes applied to the outermost element(s) the template(s) used.
      * @type string|array|null $ChildClasses Defines the XML $see renderable::attributes applied to the outermost element(s) the template(s) used.
      * @type string|array|null $ParentContainer Defines a reference to the @see renderable used to contain template results.
      * @type string|array|null $ContainerClasses Defines the CSS @see renderable::classes applied to the @see renderable used to contain template results.
      *****************************************************************************/
 
-	protected $RenderType='SmartTag';
+	protected $RenderType='Smart';
 	protected $ChildTag='li';
 	protected $ChildClasses=array();
 	protected $ChildAttributes=array();

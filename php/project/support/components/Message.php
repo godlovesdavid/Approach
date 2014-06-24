@@ -4,7 +4,7 @@ class Message extends Component
 {
 	public static $ComponentName='Message';
 	public $ChildTag='ul';
-	public $RenderType = 'SmartTag';
+	public $RenderType = 'Smart';
 	public $ContainerClasses = array('Messages');
 	public $ChildClasses = array( array('Message') );	//One set of classes per <Render:Markup> in the template
 	public $ChildAttributes = array( array('data-custom'=>'any value') );
@@ -34,7 +34,7 @@ class Message extends Component
 			$options['Message']['messages'] = ['method' =>'WHERE `p_id` =' . $ConsolidatedRow['messages']['id']];//, 'condition' => 'GROUP_BY `post_date` ASC'];
 
 			$MessageContainer=$ParentContainer->children[$i];
-			$MessageContainer->children[]=$Responses = new SmartTag('li',null,$options);
+			$MessageContainer->children[]=$Responses = new Smart('li',null,$options);
 			$Message = new Message();
 			$Message->createContext($Responses,$Responses->id,$this->context['data'],$this->context['template'] );
 			$Message->Load($options['Message']);
