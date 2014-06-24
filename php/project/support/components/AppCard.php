@@ -2,7 +2,7 @@
 class AppCard extends Component
 {
 	public static $ComponentName='AppCard';
-	public $RenderType = 'SmartTag';
+	public $RenderType = 'Smart';
 	public $ChildTag = 'ul';
 	public $ChildClasses=array('round','AppCard');
 

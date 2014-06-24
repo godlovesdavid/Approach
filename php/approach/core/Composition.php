@@ -42,19 +42,19 @@ class Composition
 {
     public static $Active;
     public $DOM;
-	public $ComponentList=[];
+	public $ComponentList=Array();
     public $InterfaceMode=false;
 
-    public $context=[];
+    public $context=array();
 	public $options;
 	public $meta;
 	public $intents;
 
-	public $editable=[];
+	public $editable=Array();
 
-	function Composition($options=[], $activate=false)
+	function Composition($options=array(), $activiate=false)
 	{
-		if($activate) $this::$Active =&$this;
+		if($activiate) $this::$Active =&$this;
 		$this->options = $options;
 	}
 	
@@ -63,11 +63,11 @@ class Composition
 		$editCount=0;
 		foreach($DOM->children as $child)
 		{
-			if($child instanceof SmartTag)
+			if($child instanceof Smart)
 			{
 				if($this->InterfaceMode)
 				{
-				  if(!in_array($child->label,renderable::$NoAutoRender))
+				  if(!in_array($child->tag,renderable::$NoAutoRender))
 					$child->classes[] = 'Interface controls editable';
 
 				  foreach($child->context as $WhichComponent => $InstanceContext)
@@ -112,7 +112,7 @@ class Composition
 		}
 		foreach($this->editable as &$editableFeature)
 		{
-			$references=[];
+			$references=array();
 			if($editableFeature['reference']->children != null)
 			{
 				foreach($editableFeature['reference']->children as $child)
@@ -121,7 +121,7 @@ class Composition
 					$references[]=$child->pageID;
 				}
 			}
-			$editableFeature['reference']=[];
+			$editableFeature['reference']=array();
 			$editableFeature['reference']=$references;	//Links to child template's $tokens['__self_id']
 		}
 
@@ -134,7 +134,7 @@ class Composition
 
 		foreach($this->DOM->children as $child)   //Get Body
 		{
-			if($child->label == 'body')
+			if($child->tag == 'body')
 			{
 				if($ApproachDebugMode)  $child->children[]=$ApproachDebugConsole;
 				$child->children[]=$RegisteredScripts;
