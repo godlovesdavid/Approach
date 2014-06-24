@@ -19,7 +19,7 @@ $OrganUpdates->content = '<h2>No new updates detected for <em>Approach Corporati
 This area is currently under initial development.</h3>';
 
 $Screen -> children[] = $OrganUpdates;
-$Screen -> children[] = new Smart($options);
+$Screen -> children[] = new SmartTag($options);
 $Screen -> children[] = $ApproachDebugConsole;
 
 $Content -> children[] = new renderable(['tag'=>'li','pageID'=>'HomePageFeatures','template'=>$StaticMarkupPath.'frontpage-row.html']);
@@ -27,7 +27,7 @@ $Content -> children[] = new renderable('div');
 $Content -> content = '<pre>'.var_export(Composition::$Active->Context,true).'</pre>';
 
 
-$Content -> children[] = new Smart($options);
+$Content -> children[] = new SmartTag($options);
 
 /***/
 
