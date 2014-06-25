@@ -37,7 +37,7 @@ class Player extends Component
 			);
 		}
 	}
-	public $RenderType = 'Smart';
+	public $RenderType = 'SmartTag';
 	public $ChildClasses = array
 			(
 				'VideoMarkup' => array

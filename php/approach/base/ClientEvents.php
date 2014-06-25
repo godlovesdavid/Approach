@@ -20,7 +20,7 @@
 
 */
 
-require_once('Render.php');
+require_once('Tag.php');
 
 $RegisteredScripts = new renderable('script');
 $RegisteredScripts->attributes['type']="text/javascript";
@@ -32,7 +32,7 @@ function GetChildScripts(&$root)
   if(isset($root->children))
   foreach($root->children as $child)   //Get Script Type Renderables In Head
   {
-      if($child->tag == 'script')
+      if($child->label == 'script')
       {
           $Container[]=$child;
       }

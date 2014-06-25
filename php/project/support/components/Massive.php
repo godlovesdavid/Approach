@@ -2,7 +2,7 @@
 class Massive extends Component
 {
 	public static $ComponentName='Massive';
-	public $RenderType = 'Smart';
+	public $RenderType = 'SmartTag';
 	public $ChildTag = 'li';
 
 	public $ChildClasses = array
