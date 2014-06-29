@@ -1,10 +1,9 @@
 <?php
-
 /*
 	Title: Tag Class for Approach
 
 
-	Copyright 2002-2014 Garet Claborn
+	Copyright 2002-2014 Garet Claborn, David Hsu
 
 	Licensed under the Apache License, Version 2.0 (the "License");
 	you may not use this file except in compliance with the License.
@@ -20,27 +19,19 @@
 
 */
 
-//require_once('/../__config_error.php');
+$NO_AUTO_RENDER = ['html', 'head', 'body', 'script', 'style', 'channel', 'rss', 'item', 'title'];
 
+/*
+*	David's version of renderable that's simplified.
+*	Simplifications include: 
+*	-constructing renderables are now: new Tag(taglabel, attributes, content)
+*	-but must specify options templates and selfclosing in another statement
+*	-attribute values are surrounded by single quotes instead of double (for PHP variable interpolation).
+*/
 class Tag
 {
-	public static $NO_AUTO_RENDER = ['html', 'head', 'body', 'script', 'style', 'channel', 'rss', 'item','title'];
-	public static $AUTOFORMAT_HTML = true;
-	public static $index = 0;
-	
-	public $id = '';
-
-	public $label = 'div';
-	public $class = [];
-	public $attributes = [];
-	
-	//(If content and children both empty, default to <selfclosing />)
-	public $content; //content contained by the opening and closing tags
-	public $children = []; //child tags 
-
-	public $preFilter;
-	public $postFilter;
-	public $selfclosing = false;
+	//content is stuff contained by open and close tags
+	public $label, $id, $class, $attributes, $content, $children, $selfclosing;
 
 	/**
 	* Create a new Tag object with tag type, id, and attributes.
@@ -58,19 +49,25 @@ class Tag
 				$this->class = $val;
 			else 
 				$this->attributes[$attr] = $val;
-		
-		//if id not given, set an id.
-		if ($this->id === '' && !in_array($this->label, Tag::$NO_AUTO_RENDER))
-			$this->id = lcfirst(get_class($this)) . Tag::$index++;
+				
+		//If content and children both empty, default to <selfclosing />
+		if ($this->content === null && $this->children === null)
+			$this->selfclosing = true;
+		else 
+			$this->selfclosing = false;
 			
 		$this->content = $content;
 	}
 
 	public function buildClasses()
 	{
+		global $NO_AUTO_RENDER;
+		
 		//no class.
 		if($this->class === null)
+		{
 			return;
+		}
 		//classes are in an array.
 		if(is_array($this->class) && count($this->class) > 0 )
 		{
@@ -87,7 +84,7 @@ class Tag
 			return $this->class = ' class = "'.trim($this->class).'"';
 		}
 		//is a no-auto-render tag? Affix no class.
-		elseif(in_array($this->label,Tag::$NO_AUTO_RENDER))
+		elseif(in_array($this->label, $NO_AUTO_RENDER))
 		{ 
 			return ''; 
 		}
@@ -99,93 +96,29 @@ class Tag
 		}
 	}
 
-	public function parse($string)
-	{
-		static $RecurseCount;
-		static $depth = 0;
-		static $Condition = [];
-		static $Conditions = [];
-		static $Saved = [];
-		static $begin = 0;
-		static $found = false;		
-	
-		$L = strlen($string);
-		for($i = 0; $i < $L; ++$i)
-		{
-			if($string[$i] == '<' && $string[$i+1] == '@' && $string[$i+2] == '-' && $string[$i+3] == '-')	//Start Of Tag Detected
-			{
-				if($string[$i+4] == ' ' && $string[$i+5] == '/' && $string[$i+6] == ' ' && $string[$i+7] == '-' &&
-				 $string[$i+8] == '-' && $string[$i+9] == '@' && $string[$i+10] == '>') //End Injector ' / --@>'
-				{
-					$Condition['Close']['Start'] = $i;
-					$i = $Condition['Close']['End'] = $i+10;
-		
-					$Evaluate = substr( $string, $Condition['Open']['Start']+4, $Condition['Open']['End']-$Condition['Open']['Start']-8);
-					$Evaluate .= PHP_EOL . '{ return 1; } '.PHP_EOL.'else{ return -1; }';
-					$Condition['result'] = eval( $Evaluate );	//Template expression blocks: Danger, Warning, Danger!
-				}
-				else	//Injector Detected
-				{
-					$Condition['Open']['Start'] = $i;
-					$i += 3;
-				}
-			}
-			elseif($string[$i] == '-' && $string[$i+1] == '-' && $string[$i+2] == '@' && $string[$i+3] == '>')	//End Of Tag Detected
-			{
-				$i = $Condition['Open']['End'] = $i+3;
-			}
-		}
-	
-		foreach($Conditions as $Cursor => $Condition)
-		{
-			$Cursor = $Cursor + 0; //make int?
-	
-			//Cut Out the markup *between* any if statments
-			$RecurseCount++;
-			$InnerStatements = substr($string, $Condition['Open']['End']+1, $Condition['Close']['Start'] - $Condition['Open']['End']-1);
-			if($Condition['result'] == -1) $InnerStatements = '';
-			
-			$string = str_replace(substr($string, $Condition['Open']['Start'], $Condition['Close']['End'] - $Condition['Open']['Start']+1 ), $InnerStatements, $string);
-	
-			if(strpos($InnerStatements, '<@--') != false) $Saved[] = $this->parse($InnerStatements);
-			$begin = $Condition['Close']['End'];
-		}
-		return $string;
-	}
-
-
 	public function buildAttributes()
 	{
-		$attribsToString = '';
+		//attributes is array case.
 		if(is_array($this->attributes) )
 		{
-			foreach($this->attributes as $att => $val)
-			{
-				if(is_array($val))
-				{
-					foreach($val as $_att => $_val)
-					{
-						$attribsToString .= ' '.$_att . ' = "'.$_val.'"';
-					}
-					return $this->attributes = $attribsToString;
-				}
-				else 
-				{
-					$attribsToString .= ' '.$att . ' = "'.$val.'"';
-				}
-			}
+			$attribsToString = '';
+			foreach($this->attributes as $attr => $val)
+				$attribsToString .= " $attr = '$val'";
+				
 			return $this->attributes = $attribsToString;
 		}
+		
+		//attributes is string case.
 		elseif(is_string($this->attributes))
 		{
-			return ' '.$this->attributes;
-		}
-		else
-		{
-			$attribsToString = ' data-approach-error = "ATTRIBUTE_RENDER_ERROR"';
+			return " $this->attributes";
 		}
 		
-		return $this->attributes = $attribsToString;
+		//attributes is unexpectedly neither string nor array.
+		else
+		{
+			return $this->attributes =  " data-approach-error = 'ATTRIBUTE_RENDER_ERROR'";
+		}
 	}
 
 	/**
@@ -198,12 +131,9 @@ class Tag
 		
 		//make indents.
 		$indent = $childrenindent = "";
-		if (Tag::$AUTOFORMAT_HTML)
-		{
-			for ($i = 0; $i < $level; $i++)
-				$indent .= "\t";
-			$childrenindent = $indent . "\t";
-		}
+		for ($i = 0; $i < $level; $i++)
+			$indent .= "\t";
+		$childrenindent = $indent . "\t";
 		
 		//render children.
 		$childlevel = $level+1;
@@ -222,5 +152,4 @@ class Tag
 			$this->label . '>' . PHP_EOL); //close
 	}
 }
-//require_once(__DIR__.'/Utility.php');
 ?>
