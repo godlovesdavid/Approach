@@ -31,15 +31,18 @@ $NO_AUTO_RENDER = ['html', 'head', 'body', 'script', 'style', 'channel', 'rss', 
 class Tag
 {
 	//content is stuff contained by open and close tags
-	public $label, $id, $class, $attributes, $content, $children, $selfclosing;
+	public $tagname, $id, $class, $attributes, $content, $children = [], $selfclosing;
 
 	/**
 	* Create a new Tag object with tag type, id, and attributes.
-	* Default tag is div.
+	* @param string $tagname name of tag, as in <tagname>.
+	* @param array $attributes list of attributes like id or class.
+	* @content html text contained within the open and close of this Tag: <open>content</close>
 	*/
-	function Tag($label = 'div', $attributes = [], $content = null)
+	function Tag($tagname = 'div', $attributes = [], $content = null)
 	{
-		$this->label = $label;
+		//get tagname.
+		$this->tagname = $tagname;
 		
 		//get attributes.
 		foreach ($attributes as $attr => $val)
@@ -55,20 +58,23 @@ class Tag
 			$this->selfclosing = true;
 		else 
 			$this->selfclosing = false;
-			
+		
+		//get content.
 		$this->content = $content;
 	}
 
-	public function buildClasses()
+	/**
+	*	Properly reset classes and write them in HTML format.
+	*/
+	function buildClasses()
 	{
-		global $NO_AUTO_RENDER;
-		
-		//no class.
+		//No class? Return blank.
 		if($this->class === null)
 		{
-			return;
+			return '';
 		}
-		//classes are in an array.
+		
+		//Class field not a string? Stringify and return it.
 		if(is_array($this->class) && count($this->class) > 0 )
 		{
 			$classesToString = '';
@@ -76,34 +82,56 @@ class Tag
 			foreach($this->class as $style)
 				$classesToString .= $style;
 				
-			return $this->class = ' class = "'.trim($classesToString).'"';
+			return $this->class = " class = '" . trim($classesToString) . "'";
 		}
-		//a one-class string.
+		
+		//class field already a string? Trim and return that.
 		elseif(is_string($this->class) && $this->class != '')
 		{
-			return $this->class = ' class = "'.trim($this->class).'"';
+			return $this->class = " class = '" . trim($this->class) . "'";
 		}
-		//is a no-auto-render tag? Affix no class.
-		elseif(in_array($this->label, $NO_AUTO_RENDER))
+		
+		//a no-auto-render tag? Return blank.
+		elseif(in_array($this->tagname,Tag::$NO_AUTO_RENDER))
 		{ 
+			$this->selfclosing = true;
 			return ''; 
 		}
-		//for all else, affix "renderable renderable_$id" as class.
+		
+		//for all else, return 'renderable renderable_$id' as class.
 		else
 		{
 			$class = lcfirst(get_class($this));
-			return ' class = "'.$class .' '. $class .'_'.$this->id . '"';
+			return " class = '$class $class_$this->id'";
 		}
 	}
 
-	public function buildAttributes()
+	/**
+	*	Properly reset attributes and write them in HTML format.
+	*/
+	function buildAttributes()
 	{
+		$attribsToString = '';
+		
 		//attributes is array case.
 		if(is_array($this->attributes) )
 		{
-			$attribsToString = '';
-			foreach($this->attributes as $attr => $val)
-				$attribsToString .= " $attr = '$val'";
+			foreach($this->attributes as $att => $val)
+			
+				//further parse if value is also an array.
+				if(is_array($val))
+				{
+					foreach($val as $_att => $_val)
+						$attribsToString .= " $_att = '$_val'";
+						
+					return $this->attributes = $attribsToString;
+				}
+				
+				//build string normally if not array.
+				else 
+				{
+					$attribsToString .= " $att = '$val'";
+				}
 				
 			return $this->attributes = $attribsToString;
 		}
@@ -117,39 +145,60 @@ class Tag
 		//attributes is unexpectedly neither string nor array.
 		else
 		{
-			return $this->attributes =  " data-approach-error = 'ATTRIBUTE_RENDER_ERROR'";
+			$attribsToString = " data-approach-error = 'ATTRIBUTE_RENDER_ERROR'";
 		}
+		
+		//re-set attributes to its proper format, and return it.
+		return $this->attributes = $attribsToString;
 	}
+
 
 	/**
 	*	Give a string representation of this tag and its children.
 	*/
-	public function render($level = 0)
+	public function render()
+	{
+		$markup = $this->content;
+		$this->content = '';
+		
+		//render children to content.
+		foreach($this->children as $child)
+			$this->content .= $child->render();
+
+		//render self.
+		return "<$this->tagname" . //open
+			($this->id != null			?	" id = '$this->id'"	: '')	.
+			(isset($this->attributes)	?	$this->buildAttributes()	: '') .
+			(isset($this->class)		?	$this->buildClasses()		: '') .
+			($this->selfclosing 		?	"/>" 						: ">$markup$this->content</$this->tagname>"); //close
+	}
+	
+	/**
+	*	render as above, but tidied HTML.
+	*	@param int $level indentation level
+	*/
+	public function renderFormatted($level = 0)
 	{
 		$markup = $this->content;
 		$this->content = '';
 		
 		//make indents.
-		$indent = $childrenindent = "";
+		$indent = $childrenindent = '';
 		for ($i = 0; $i < $level; $i++)
 			$indent .= "\t";
-		$childrenindent = $indent . "\t";
+		$childrenindent = "$indent\t";
 		
-		//render children.
-		$childlevel = $level+1;
-		foreach($this->children as $renderable)
-			$this->content .= PHP_EOL . $childrenindent . $renderable->render($childlevel) . $indent;
+		//render children to content.
+		$childlevel = $level + 1;
+		foreach($this->children as $child)
+			$this->content .= "\n$childrenindent" . $child->renderFormatted($childlevel) . $indent;
 
-		//write attributes and class for own tag, and close it.
-		return '<' . $this->label . //open
-			($this->id != null			?	' id = "' . $this->id .'"'	: '')	.
-			(isset($this->attributes)	?	$this->buildAttributes()	: '')	.
-			(isset($this->class)		?	$this->buildClasses()		: '')	.
-			($this->selfclosing 		?	'/>' . PHP_EOL 			: '>' .	
-			
-			$markup . $this->content . '</' . //content (skip if self-containing)
-			
-			$this->label . '>' . PHP_EOL); //close
+		//render self.
+		return "<$this->tagname" . //open
+			($this->id != null			?	" id = '$this->id'"	: '')	.
+			(isset($this->attributes)	?	$this->buildAttributes()	: '') .
+			(isset($this->class)		?	$this->buildClasses()		: '') .
+			($this->selfclosing 		?	"/>\n" 						: ">$markup$this->content</$this->tagname>\n"); //close
 	}
 }
 ?>
